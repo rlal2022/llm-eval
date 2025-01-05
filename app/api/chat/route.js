@@ -6,7 +6,7 @@ const groq = new Groq({ apiKey: process.env.NEXT_GROQ_API_KEY });
 
 export async function POST(request) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, model } = await request.json();
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
@@ -15,8 +15,12 @@ export async function POST(request) {
       });
     }
 
-    const chatCompletion = await getGroqChatCompletion(prompt);
-    return new Response(JSON.stringify(chatCompletion), {
+    const start = Date.now();
+    const chatCompletion = await getGroqChatCompletion(prompt, model);
+    const end = Date.now();
+    const time = end - start;
+
+    return new Response(JSON.stringify({ ...chatCompletion, time }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -35,7 +39,7 @@ export async function POST(request) {
   }
 }
 
-async function getGroqChatCompletion(prompt) {
+async function getGroqChatCompletion(prompt, model) {
   try {
     const response = await groq.chat.completions.create({
       messages: [
@@ -48,7 +52,7 @@ async function getGroqChatCompletion(prompt) {
           content: prompt,
         },
       ],
-      model: "llama-3.3-70b-versatile",
+      model: model,
     });
     return response;
   } catch (error) {

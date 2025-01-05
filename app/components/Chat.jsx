@@ -1,8 +1,19 @@
 "use client";
 
-import { Box, Button, TextField, Avatar, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  TextField,
+  Avatar,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import React, { useState, useRef, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { useLLM } from "../context/LLMContext";
 
 const darkTheme = createTheme({
   palette: {
@@ -14,6 +25,7 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const { selectedModel, setSelectedModel } = useLLM();
   const messagesEndRef = useRef(null);
 
   const sendMessage = async () => {
@@ -29,13 +41,14 @@ const Chat = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ prompt: input, model: selectedModel }),
       });
       if (!response.ok) {
         throw new Error("Failed to send message");
       }
 
       const data = await response.json();
+
       setMessages([
         ...newMessages,
         {
@@ -59,6 +72,13 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <Box
@@ -70,6 +90,27 @@ const Chat = () => {
         flexDirection="column"
         sx={{ backgroundColor: darkTheme.palette.background.default }}
       >
+        {/*LLM Selection */}
+        <Box mt={2}>
+          <FormControl fullWidth variant="outlined" size="small">
+            <InputLabel id="model-select-label">Select LLM Model</InputLabel>
+            <Select
+              labelId="model-select-label"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              label="Select LLM Model"
+            >
+              <MenuItem value={"gemma2-9b-it"}>Gemma 2.9b IT</MenuItem>
+              <MenuItem value={"mixtral-8x7b-32768"}>
+                Mixtral-8x7b-32768
+              </MenuItem>
+              <MenuItem value={"llama3-8b-8192"}>Llama3-8b-8192</MenuItem>
+              <MenuItem value={"llama-3.1-8b-instant"}>
+                Llama 3.1 8b Instant
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
         {/* Chat Messages */}
         <Box flex={1} p={2} sx={{ overflow: "auto" }}>
           {messages.map((message, index) => (
@@ -82,7 +123,7 @@ const Chat = () => {
               mb={2}
             >
               {message.role !== "user" && (
-                <Avatar sx={{ bgcolor: "primary.main", mr: 1 }}>AI</Avatar>
+                <Avatar sx={{ bgcolor: "#818181", mr: 1 }}>AI</Avatar>
               )}
               <Box
                 sx={{
@@ -91,7 +132,7 @@ const Chat = () => {
                   borderRadius: 2,
                   bgcolor:
                     message.role === "user"
-                      ? "secondary.main"
+                      ? "#2196f3"
                       : darkTheme.palette.background.paper,
                   color:
                     message.role === "user"
@@ -102,13 +143,12 @@ const Chat = () => {
                 <Typography variant="body1">{message.content}</Typography>
               </Box>
               {message.role === "user" && (
-                <Avatar sx={{ bgcolor: "secondary.main", ml: 1 }}>U</Avatar>
+                <Avatar sx={{ bgcolor: "#2196f3", ml: 1 }}>U</Avatar>
               )}
             </Box>
           ))}
           <div ref={messagesEndRef} />
         </Box>
-
         {/* Input Field */}
         <Box
           display="flex"
@@ -125,6 +165,7 @@ const Chat = () => {
             placeholder="Type a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             sx={{ marginRight: 2 }}
           />
           <Button
